@@ -117,6 +117,30 @@ async def test_form_cannot_connect(hass):
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
+async def test_form_both_password_and_token(hass):
+    """Test both a password and a token being set is rejected.
+
+    A password and a token are two different login paths (native Carson
+    account vs. a captured Google/SSO token) and only one should ever be
+    in play at a time.
+    """
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+
+    both_input = {
+        "username": "foo@bar.com",
+        "password": "bar",
+        "token": "test-jwt-token",
+    }
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"], both_input,
+    )
+
+    assert result2["type"] is FlowResultType.FORM
+    assert result2["errors"] == {"base": "both_credentials"}
+
+
 async def test_reauth_flow_updates_existing_entry(hass):
     """Test reauth lets a fresh token be pasted in without a duplicate entry.
 
@@ -187,6 +211,33 @@ async def test_reauth_flow_invalid_auth(hass):
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "reauth_confirm"
     assert result2["errors"] == {"base": "invalid_auth"}
+    assert entry.data["token"] == "stale-token"
+
+
+async def test_reauth_flow_both_password_and_token(hass):
+    """Test reauth also rejects a password and a token being set together."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"username": "foo@bar.com", "password": "", "token": "stale-token"},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_REAUTH,
+            "entry_id": entry.entry_id,
+        },
+        data=entry.data,
+    )
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"password": "bar", "token": "fresh-token"},
+    )
+
+    assert result2["type"] is FlowResultType.FORM
+    assert result2["step_id"] == "reauth_confirm"
+    assert result2["errors"] == {"base": "both_credentials"}
     assert entry.data["token"] == "stale-token"
 
 

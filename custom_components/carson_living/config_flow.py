@@ -46,6 +46,9 @@ async def validate_input(hass: core.HomeAssistant, data):
     password = data.get("password", "")
     token = data.get("token", "").strip()
 
+    if password and token:
+        raise BothCredentialsProvided
+
     try:
         if token:
             # Token-first path: validate the supplied JWT directly against
@@ -96,6 +99,8 @@ class CarsonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
+            except BothCredentialsProvided:
+                errors["base"] = "both_credentials"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -142,6 +147,8 @@ class CarsonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
+            except BothCredentialsProvided:
+                errors["base"] = "both_credentials"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -176,6 +183,10 @@ class CannotConnect(exceptions.HomeAssistantError):
 
 class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
+
+
+class BothCredentialsProvided(exceptions.HomeAssistantError):
+    """Error to indicate both a password and a token were provided."""
 
 
 class CarsonOptionsFlowHandler(config_entries.OptionsFlow):
