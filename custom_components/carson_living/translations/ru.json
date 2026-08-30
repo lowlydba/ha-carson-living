@@ -1,0 +1,32 @@
+{
+  "title": "Carson",
+  "config": {
+    "abort": {
+      "already_configured": "Настройка этого устройства уже выполнена."
+    },
+    "error": {
+      "cannot_connect": "Ошибка подключения",
+      "invalid_auth": "Неверная аутентификация.",
+      "unknown": "Непредвиденная ошибка."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "password": "Пароль",
+          "username": "Логин"
+        },
+        "title": "Carson"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "carson_devices": {
+        "description": "Настройки видимости типов устройств Carson",
+        "data": {
+          "list_from_eagle_eye": "Список камер прямо из Eagle Eye"
+        }
+      }
+    }
+  }
+}

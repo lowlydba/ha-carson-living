@@ -1,11 +1,12 @@
 {
+  "title": "Carson",
   "config": {
     "abort": {
-      "already_configured": "Apparat ass scho konfigur\u00e9iert"
+      "already_configured": "Apparat ass scho konfiguréiert"
     },
     "error": {
       "cannot_connect": "Feeler bei der Verbindung",
-      "invalid_auth": "Ong\u00eblteg Authentifikatioun",
+      "invalid_auth": "Ongëlteg Authentifikatioun",
       "unknown": "Onerwaarte Feeler"
     },
     "step": {
@@ -16,15 +17,14 @@
         },
         "title": "Mam Carson Kont verbannen"
       }
-    },
-    "title": "Carson"
+    }
   },
   "options": {
     "step": {
       "carson_devices": {
-        "description": "Visibilit\u00e9it vun Carson Apparater konfigur\u00e9ieren",
+        "description": "Visibilitéit vun Carson Apparater konfiguréieren",
         "data": {
-          "list_from_eagle_eye": "Kamera L\u00ebscht direkt vun Eagle Eye"
+          "list_from_eagle_eye": "Kamera Lëscht direkt vun Eagle Eye"
         }
       }
     }
