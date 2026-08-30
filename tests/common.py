@@ -8,7 +8,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.carson_living import DOMAIN
 
-CARSON_API_VERSION = "1.4.3"
+CARSON_API_VERSION = "1.4.4"
 CONF_AND_FORM_CREDS = {"username": "foo@bar.com", "password": "bar"}
 
 

@@ -21,14 +21,27 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Create the Cameras for the Carson devices."""
     _LOGGER.debug("Setting up Carson Camera entries")
     carson = hass.data[DOMAIN][config_entry.entry_id]["api"]
-    if get_list_een_option(config_entry):
-        cameras = [
-            camera for b in carson.buildings for camera in b.eagleeye_api.cameras
-        ]
-    else:
-        cameras = [camera for b in carson.buildings for camera in b.cameras]
+    cameras = []
+    for building in carson.buildings:
+        building.eagleeye_api.update()
+        if get_list_een_option(config_entry):
+            cameras.extend(list(building.eagleeye_api.cameras))
+            continue
 
-    async_add_entities(EagleEyeCamera(config_entry.entry_id, cam, hass) for cam in cameras)
+        allowed_camera_ids = {
+            camera["liveViewId"]
+            for camera in building.entity_payload.get("cameras", [])
+            if camera.get("provider") == "eagle_eye"
+        }
+        cameras.extend(
+            camera
+            for camera in building.eagleeye_api.cameras
+            if camera.entity_id in allowed_camera_ids
+        )
+
+    async_add_entities(
+        [EagleEyeCamera(config_entry.entry_id, camera, hass) for camera in cameras]
+    )
 
 
 def get_list_een_option(config_entry):
@@ -53,7 +66,7 @@ class EagleEyeCamera(CarsonEntityMixin, Camera):
         return self._ee_camera.name
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the device state attributes."""
         return {
             ATTR_ATTRIBUTION: ATTRIBUTION,
@@ -64,7 +77,7 @@ class EagleEyeCamera(CarsonEntityMixin, Camera):
             "timezone": self._ee_camera.timezone,
         }
 
-    def camera_image(self):
+    def camera_image(self, width=None, height=None):
         """Return bytes of camera image."""
         _LOGGER.debug("Getting live camera image for %s", self.name)
         buffer = io.BytesIO()

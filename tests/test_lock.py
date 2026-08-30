@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
+from homeassistant.helpers import entity_registry as er
 
 from .common import CARSON_API_VERSION, carson_load_fixture, setup_platform
 
@@ -9,7 +10,7 @@ from .common import CARSON_API_VERSION, carson_load_fixture, setup_platform
 async def test_entity_registry(hass, success_requests_mock):  # pylint: disable=unused-argument
     """Tests that the devices are registered in the entity registry."""
     await setup_platform(hass, LOCK_DOMAIN)
-    entity_registry = await hass.helpers.entity_registry.async_get_registry()
+    entity_registry = er.async_get(hass)
 
     entry = entity_registry.async_get("lock.door_1")
     assert entry.unique_id == "carson_door_21"
@@ -77,7 +78,7 @@ async def test_lock_can_be_updated(hass, success_requests_mock):
         text=carson_load_fixture("carson_me_update.json"),
     )
 
-    await hass.services.async_call("carson", "update", {})
+    await hass.services.async_call("carson_living", "update", {})
 
     await hass.async_block_till_done()
 

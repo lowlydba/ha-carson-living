@@ -3,6 +3,7 @@ from unittest.mock import patch, Mock
 from carson_living import CarsonAuthenticationError, CarsonCommunicationError
 
 from homeassistant import config_entries, setup
+from homeassistant.data_entry_flow import FlowResultType
 from custom_components.carson_living.const import CONF_LIST_FROM_EAGLE_EYE, DOMAIN
 
 from tests.common import MockConfigEntry
@@ -15,7 +16,7 @@ async def test_form(hass):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] == "form"
+    assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
@@ -30,13 +31,51 @@ async def test_form(hass):
             result["flow_id"], CONF_AND_FORM_CREDS,
         )
 
-    assert result2["type"] == "create_entry"
+    assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == CONF_AND_FORM_CREDS["username"]
     assert result2["data"] == {
         "username": CONF_AND_FORM_CREDS["username"],
         "password": CONF_AND_FORM_CREDS["password"],
         "token": "test-token",
     }
+    await hass.async_block_till_done()
+    assert len(mock_setup.mock_calls) == 1
+    assert len(mock_setup_entry.mock_calls) == 1
+
+
+async def test_form_with_token(hass):
+    """Test we can sign in with a token instead of a password (e.g. Google/SSO-only accounts)."""
+    await setup.async_setup_component(hass, "persistent_notification", {})
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {}
+
+    token_input = {"username": "foo@bar.com", "password": "", "token": "test-jwt-token"}
+
+    with patch(
+        "custom_components.carson_living.config_flow.Carson",
+        return_value=Mock(token="test-jwt-token"),
+    ) as mock_carson, patch(
+        "custom_components.carson_living.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "custom_components.carson_living.async_setup_entry", return_value=True,
+    ) as mock_setup_entry:
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"], token_input,
+        )
+
+    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["title"] == token_input["username"]
+    assert result2["data"] == {
+        "username": token_input["username"],
+        "password": "",
+        "token": "test-jwt-token",
+    }
+    mock_carson.assert_called_once_with(
+        token_input["username"], token_input["password"], token_input["token"]
+    )
     await hass.async_block_till_done()
     assert len(mock_setup.mock_calls) == 1
     assert len(mock_setup_entry.mock_calls) == 1
@@ -56,7 +95,7 @@ async def test_form_invalid_auth(hass):
             result["flow_id"], CONF_AND_FORM_CREDS,
         )
 
-    assert result2["type"] == "form"
+    assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
@@ -74,13 +113,13 @@ async def test_form_cannot_connect(hass):
             result["flow_id"], CONF_AND_FORM_CREDS,
         )
 
-    assert result2["type"] == "form"
+    assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
 async def test_option_flow(hass):
     """Test config flow options."""
-    entry = MockConfigEntry(domain=DOMAIN, data={}, options=None)
+    entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
     entry.add_to_hass(hass)
 
     flow = await hass.config_entries.options.async_create_flow(
@@ -88,13 +127,13 @@ async def test_option_flow(hass):
     )
 
     result = await flow.async_step_init()
-    assert result["type"] == "form"
+    assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "carson_devices"
 
     result = await flow.async_step_carson_devices(
         user_input={CONF_LIST_FROM_EAGLE_EYE: False}
     )
-    assert result["type"] == "create_entry"
+    assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_LIST_FROM_EAGLE_EYE: False,
     }

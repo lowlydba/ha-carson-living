@@ -1,5 +1,4 @@
 """The Carson integration."""
-import asyncio
 from functools import partial
 import logging
 
@@ -95,8 +94,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER.debug("Updating all carson ")
         for info in hass.data[DOMAIN].values():
             await hass.async_add_executor_job(info["api"].update)
+            for building in info["api"].buildings:
+                await hass.async_add_executor_job(building.eagleeye_api.update)
             for ha_entity in info["ha_entities"].values():
-                ha_entity.schedule_update_ha_state()
+                ha_entity.async_schedule_update_ha_state()
 
     # register service
     hass.services.async_register(DOMAIN, "update", async_carson_api)
@@ -109,14 +110,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug(
         "async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) called"
     )
-    unload_ok = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, component)
-                for component in PLATFORMS
-            ]
-        )
-    )
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
 

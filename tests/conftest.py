@@ -1,5 +1,8 @@
 """Configuration for Ring tests."""
+import asyncio
+import sys
 import pytest
+import pytest_socket
 import requests_mock
 
 from .common import (
@@ -8,6 +11,19 @@ from .common import (
     fixture_building_id,
     fixture_een_subdomain,
 )
+
+
+if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+if sys.platform == "win32":
+    pytest_socket.disable_socket = lambda allow_unix_socket=False: None
+
+
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations):
+    """Enable loading custom_components during tests."""
+    yield enable_custom_integrations
 
 
 @pytest.fixture(name="success_requests_mock")

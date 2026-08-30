@@ -11,7 +11,8 @@
     "step": {
       "user": {
         "data": {
-          "password": "Password",
+          "password": "Password (optional if using a token)",
+          "token": "Token (optional, for Google/SSO-only accounts)",
           "username": "Username"
         },
         "title": "Sign-in with Carson account"

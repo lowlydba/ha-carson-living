@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
+from homeassistant.helpers import entity_registry as er
 
 from .common import carson_load_fixture, fixture_een_subdomain, setup_platform
 
@@ -9,7 +10,7 @@ from .common import carson_load_fixture, fixture_een_subdomain, setup_platform
 async def test_entity_registry(hass, success_requests_mock):  # pylint: disable=unused-argument
     """Tests that the devices are registered in the entity registry."""
     await setup_platform(hass, CAMERA_DOMAIN)
-    entity_registry = await hass.helpers.entity_registry.async_get_registry()
+    entity_registry = er.async_get(hass)
 
     entry = entity_registry.async_get("camera.camera_name_1")
     assert entry.unique_id == "eagleeye_camera_c0"
@@ -26,7 +27,7 @@ async def test_entity_registry_een_option_enabled(hass, success_requests_mock): 
         "custom_components.carson_living.camera.get_list_een_option", return_value=True
     ) as mock_setup:
         await setup_platform(hass, CAMERA_DOMAIN)
-        entity_registry = await hass.helpers.entity_registry.async_get_registry()
+        entity_registry = er.async_get(hass)
 
         entry = entity_registry.async_get("camera.camera_name_1")
         assert entry.unique_id == "eagleeye_camera_c0"
@@ -51,7 +52,7 @@ async def test_camera_can_be_updated(hass, success_requests_mock):
         text=carson_load_fixture("een_device_list_update.json"),
     )
 
-    await hass.services.async_call("carson", "update", {})
+    await hass.services.async_call("carson_living", "update", {})
 
     await hass.async_block_till_done()
 

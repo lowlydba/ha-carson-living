@@ -70,7 +70,7 @@ class CarsonLock(CarsonEntityMixin, LockEntity):
         self.open()
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return device specific state attributes."""
         return {
             "provider": self._carson_door.provider,
@@ -87,4 +87,4 @@ class CarsonLock(CarsonEntityMixin, LockEntity):
         """Delay x seconds and update state to LOCKED."""
         await asyncio.sleep(delay)
         self._is_locked = True
-        self.schedule_update_ha_state()
+        self.async_schedule_update_ha_state()
