@@ -1,4 +1,4 @@
-# ha-carson-living
+# ha-carson-living-electric-boogaloo
 [![Coverage Status](https://coveralls.io/repos/github/rado0x54/ha-carson-living/badge.svg?branch=master)](https://coveralls.io/github/rado0x54/ha-carson-living?branch=master)
 ![Python package](https://github.com/rado0x54/ha-carson-living/workflows/Python%20package/badge.svg)
 
