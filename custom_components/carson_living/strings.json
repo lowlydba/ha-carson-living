@@ -6,7 +6,8 @@
         "title": "Sign-in with Carson",
         "data": {
           "username": "Username",
-          "password": "Password"
+          "password": "Password (optional if using a token)",
+          "token": "Token (optional, for Google/SSO-only accounts)"
         }
       }
     },

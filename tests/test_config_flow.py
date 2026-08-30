@@ -42,6 +42,44 @@ async def test_form(hass):
     assert len(mock_setup_entry.mock_calls) == 1
 
 
+async def test_form_with_token(hass):
+    """Test we can sign in with a token instead of a password (e.g. Google/SSO-only accounts)."""
+    await setup.async_setup_component(hass, "persistent_notification", {})
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    assert result["type"] == "form"
+    assert result["errors"] == {}
+
+    token_input = {"username": "foo@bar.com", "password": "", "token": "test-jwt-token"}
+
+    with patch(
+        "custom_components.carson_living.config_flow.Carson",
+        return_value=Mock(token="test-jwt-token"),
+    ) as mock_carson, patch(
+        "custom_components.carson_living.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "custom_components.carson_living.async_setup_entry", return_value=True,
+    ) as mock_setup_entry:
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"], token_input,
+        )
+
+    assert result2["type"] == "create_entry"
+    assert result2["title"] == token_input["username"]
+    assert result2["data"] == {
+        "username": token_input["username"],
+        "password": "",
+        "token": "test-jwt-token",
+    }
+    mock_carson.assert_called_once_with(
+        token_input["username"], token_input["password"], token_input["token"]
+    )
+    await hass.async_block_till_done()
+    assert len(mock_setup.mock_calls) == 1
+    assert len(mock_setup_entry.mock_calls) == 1
+
+
 async def test_form_invalid_auth(hass):
     """Test we handle invalid auth."""
     result = await hass.config_entries.flow.async_init(

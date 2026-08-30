@@ -2,6 +2,7 @@
 import logging
 
 from carson_living import (
+    Carson,
     CarsonAuth,
     CarsonAuthenticationError,
     CarsonCommunicationError,
@@ -19,7 +20,21 @@ from .const import (  # pylint: disable=unused-import
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_SCHEMA = vol.Schema({"username": str, "password": str})
+# Password is optional and a "token" field is supported so accounts that only
+# ever sign in via a federated provider (e.g. "Sign in with Google", which
+# Carson's API has no direct login endpoint for) can authenticate with a JWT
+# captured from an already-logged-in session (e.g. via a proxy such as
+# mitmproxy or HTTP Toolkit) instead of a native Carson password. Password is
+# still used afterwards, internally by the underlying carson_living library,
+# to renew the token once it expires - if none is set, expect to supply a
+# fresh token at that point.
+DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required("username"): str,
+        vol.Optional("password", default=""): str,
+        vol.Optional("token", default=""): str,
+    }
+)
 
 
 async def validate_input(hass: core.HomeAssistant, data):
@@ -27,19 +42,29 @@ async def validate_input(hass: core.HomeAssistant, data):
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-    auth = CarsonAuth(data["username"], data["password"])
+    username = data["username"]
+    password = data.get("password", "")
+    token = data.get("token", "").strip()
 
     try:
+        if token:
+            # Token-first path: validate the supplied JWT directly against
+            # the Carson API instead of doing a password login.
+            carson = await hass.async_add_executor_job(
+                Carson, username, password, token
+            )
+            return carson.token
+
+        # Original path: real username/password login.
+        auth = CarsonAuth(username, password)
         await hass.async_add_executor_job(auth.update_token)
+        return auth.token
     except CarsonAuthenticationError as error:
-        _LOGGER.warning("Authentication error for %s", data["username"])
+        _LOGGER.warning("Authentication error for %s", username)
         raise InvalidAuth from error
     except CarsonCommunicationError as error:
         _LOGGER.warning("Communication error with Carson API.")
         raise CannotConnect from error
-
-    # Return info that you want to store in the config entry.
-    return auth.token
 
 
 class CarsonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -60,7 +85,7 @@ class CarsonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     title=user_input["username"],
                     data={
                         "username": user_input["username"],
-                        "password": user_input["password"],
+                        "password": user_input.get("password", ""),
                         "token": token,
                     },
                 )
