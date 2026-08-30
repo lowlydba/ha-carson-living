@@ -3,6 +3,7 @@ from unittest.mock import patch, Mock
 from carson_living import CarsonAuthenticationError, CarsonCommunicationError
 
 from homeassistant import config_entries, setup
+from homeassistant.data_entry_flow import FlowResultType
 from custom_components.carson_living.const import CONF_LIST_FROM_EAGLE_EYE, DOMAIN
 
 from tests.common import MockConfigEntry
@@ -15,7 +16,7 @@ async def test_form(hass):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] == "form"
+    assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
@@ -30,7 +31,7 @@ async def test_form(hass):
             result["flow_id"], CONF_AND_FORM_CREDS,
         )
 
-    assert result2["type"] == "create_entry"
+    assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == CONF_AND_FORM_CREDS["username"]
     assert result2["data"] == {
         "username": CONF_AND_FORM_CREDS["username"],
@@ -48,7 +49,7 @@ async def test_form_with_token(hass):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] == "form"
+    assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     token_input = {"username": "foo@bar.com", "password": "", "token": "test-jwt-token"}
@@ -65,7 +66,7 @@ async def test_form_with_token(hass):
             result["flow_id"], token_input,
         )
 
-    assert result2["type"] == "create_entry"
+    assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == token_input["username"]
     assert result2["data"] == {
         "username": token_input["username"],
@@ -94,7 +95,7 @@ async def test_form_invalid_auth(hass):
             result["flow_id"], CONF_AND_FORM_CREDS,
         )
 
-    assert result2["type"] == "form"
+    assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
@@ -112,13 +113,13 @@ async def test_form_cannot_connect(hass):
             result["flow_id"], CONF_AND_FORM_CREDS,
         )
 
-    assert result2["type"] == "form"
+    assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
 async def test_option_flow(hass):
     """Test config flow options."""
-    entry = MockConfigEntry(domain=DOMAIN, data={}, options=None)
+    entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
     entry.add_to_hass(hass)
 
     flow = await hass.config_entries.options.async_create_flow(
@@ -126,13 +127,13 @@ async def test_option_flow(hass):
     )
 
     result = await flow.async_step_init()
-    assert result["type"] == "form"
+    assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "carson_devices"
 
     result = await flow.async_step_carson_devices(
         user_input={CONF_LIST_FROM_EAGLE_EYE: False}
     )
-    assert result["type"] == "create_entry"
+    assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_LIST_FROM_EAGLE_EYE: False,
     }

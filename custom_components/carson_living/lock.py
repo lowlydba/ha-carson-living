@@ -70,7 +70,7 @@ class CarsonLock(CarsonEntityMixin, LockEntity):
         self.open()
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return device specific state attributes."""
         return {
             "provider": self._carson_door.provider,

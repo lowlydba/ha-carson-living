@@ -71,7 +71,10 @@ class CarsonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Carson."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
+
+    def is_matching(self, other_flow) -> bool:
+        """Return whether another flow represents the same discovery."""
+        return False
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
@@ -128,7 +131,7 @@ class CarsonOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         """Initialize Carson options flow."""
-        self.config_entry = config_entry
+        self._config_entry = config_entry
         self.options = dict(config_entry.options)
 
     async def async_step_init(self, user_input=None):
@@ -150,7 +153,7 @@ class CarsonOptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_LIST_FROM_EAGLE_EYE,
-                        default=self.config_entry.options.get(
+                        default=self._config_entry.options.get(
                             CONF_LIST_FROM_EAGLE_EYE, DEFAULT_CONF_LIST_FROM_EAGLE_EYE
                         ),
                     ): bool,

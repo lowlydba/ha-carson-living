@@ -95,6 +95,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER.debug("Updating all carson ")
         for info in hass.data[DOMAIN].values():
             await hass.async_add_executor_job(info["api"].update)
+            for building in info["api"].buildings:
+                await hass.async_add_executor_job(building.eagleeye_api.update)
             for ha_entity in info["ha_entities"].values():
                 ha_entity.schedule_update_ha_state()
 
