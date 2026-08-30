@@ -1,0 +1,32 @@
+{
+  "title": "Carson",
+  "config": {
+    "abort": {
+      "already_configured": "Urządzenie jest już skonfigurowane"
+    },
+    "error": {
+      "cannot_connect": "Błąd połączenia",
+      "invalid_auth": "Niepoprawne uwierzytelnienie",
+      "unknown": "Niespodziewany błąd"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "password": "Hasło",
+          "username": "Nazwa użytkownika"
+        },
+        "title": "Zaloguj się do konta Carson"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "carson_devices": {
+        "description": "Skonfiguruj widoczność urządzeń Carson",
+        "data": {
+          "list_from_eagle_eye": "Lista kamer bezpośrednio z Eagle Eye"
+        }
+      }
+    }
+  }
+}

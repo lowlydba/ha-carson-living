@@ -1,6 +1,6 @@
 # ha-carson-living-electric-boogaloo
-[![Coverage Status](https://coveralls.io/repos/github/rado0x54/ha-carson-living/badge.svg?branch=master)](https://coveralls.io/github/rado0x54/ha-carson-living?branch=master)
-![Python package](https://github.com/rado0x54/ha-carson-living/workflows/Python%20package/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/lowlydba/ha-carson-living/badge.svg?branch=main)](https://coveralls.io/github/lowlydba/ha-carson-living?branch=main)
+![Python package](https://github.com/lowlydba/ha-carson-living/workflows/Python%20package/badge.svg)
 
 Custom integration for [Carson Living](https://www.carson.live/) for Home Assistant.
 
@@ -31,7 +31,7 @@ Move to setup setup below
 
 If you want to manually install
 
-Copy files in this repos custom_components/carson/ folder into path/to/haconfig/custom_components/carson/
+Copy files in this repos custom_components/carson_living/ folder into path/to/haconfig/custom_components/carson_living/
 
 ### Setup
 

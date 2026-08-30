@@ -1,0 +1,32 @@
+{
+  "title": "Carson",
+  "config": {
+    "abort": {
+      "already_configured": "裝置已經設定完成"
+    },
+    "error": {
+      "cannot_connect": "連線錯誤。",
+      "invalid_auth": "驗證碼無效",
+      "unknown": "未預期錯誤"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "password": "密碼",
+          "username": "使用者名稱"
+        },
+        "title": "以 Carson 帳號登入"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "carson_devices": {
+        "description": "設定 Carson 可視設備類型",
+        "data": {
+          "list_from_eagle_eye": "直接从 Eagle Eye 取得的相机清单"
+        }
+      }
+    }
+  }
+}

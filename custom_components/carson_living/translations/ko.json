@@ -1,0 +1,32 @@
+{
+  "title": "Carson",
+  "config": {
+    "abort": {
+      "already_configured": "기기가 이미 구성되었습니다"
+    },
+    "error": {
+      "cannot_connect": "연결 오류가 발생했습니다",
+      "invalid_auth": "인증이 잘못되었습니다",
+      "unknown": "예상치 못한 오류가 발생했습니다"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "password": "비밀번호",
+          "username": "사용자 이름"
+        },
+        "title": "Carson 계정으로 로그인"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "carson_devices": {
+        "description": "Carson 기기 유형의 표시 여부 구성",
+        "data": {
+          "list_from_eagle_eye": "Eagle Eye 에서 직접 카메라 목록"
+        }
+      }
+    }
+  }
+}

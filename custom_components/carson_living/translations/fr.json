@@ -1,7 +1,8 @@
 {
+  "title": "Carson",
   "config": {
     "abort": {
-      "already_configured": "L'appareil est d\u00e9j\u00e0 configur\u00e9"
+      "already_configured": "L'appareil est déjà configuré"
     },
     "error": {
       "cannot_connect": "Erreur de connexion",
@@ -16,15 +17,14 @@
         },
         "title": "Connectez-vous avec votre compte Carson"
       }
-    },
-    "title": "Carson"
+    }
   },
   "options": {
     "step": {
       "carson_devices": {
-        "description": "Configurer la visibilit\u00e9 des appareils de type Carson",
+        "description": "Configurer la visibilité des appareils de type Carson",
         "data": {
-          "list_from_eagle_eye": "Liste des cam\u00e9ras directement depuis Eagle Eye"
+          "list_from_eagle_eye": "Liste des caméras directement depuis Eagle Eye"
         }
       }
     }

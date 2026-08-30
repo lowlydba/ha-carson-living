@@ -1,4 +1,5 @@
 {
+  "title": "Carson",
   "config": {
     "abort": {
       "already_configured": "Enheten er allerede konfigurert"
@@ -14,10 +15,9 @@
           "password": "Passord",
           "username": "Brukernavn"
         },
-        "title": "Logg p\u00e5 med din Carson-konto"
+        "title": "Logg på med din Carson-konto"
       }
-    },
-    "title": "Carson"
+    }
   },
   "options": {
     "step": {
