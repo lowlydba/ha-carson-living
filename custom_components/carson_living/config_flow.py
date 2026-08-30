@@ -46,6 +46,9 @@ async def validate_input(hass: core.HomeAssistant, data):
     password = data.get("password", "")
     token = data.get("token", "").strip()
 
+    if password and token:
+        raise BothCredentialsProvided
+
     try:
         if token:
             # Token-first path: validate the supplied JWT directly against
@@ -96,6 +99,8 @@ class CarsonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
+            except BothCredentialsProvided:
+                errors["base"] = "both_credentials"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -111,6 +116,60 @@ class CarsonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_user(user_input)
 
+    async def async_step_reauth(self, entry_data):
+        # pylint: disable=unused-argument
+        """Handle reauthentication, e.g. when a captured token has expired."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
+        """Ask for a fresh password and/or token for an existing entry.
+
+        This updates the existing config entry in place (preserving its
+        entity IDs/history) instead of creating a duplicate entry, which is
+        the whole point of supporting this for Google/SSO-only accounts:
+        a fresh token can just be pasted in here whenever the old one
+        expires.
+        """
+        errors = {}
+        reauth_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+
+        if user_input is not None:
+            data = {
+                "username": reauth_entry.data["username"],
+                "password": user_input.get("password", ""),
+                "token": user_input.get("token", ""),
+            }
+            try:
+                token = await validate_input(self.hass, data)
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except InvalidAuth:
+                errors["base"] = "invalid_auth"
+            except BothCredentialsProvided:
+                errors["base"] = "both_credentials"
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+            else:
+                return self.async_update_reload_and_abort(
+                    reauth_entry,
+                    data={**data, "token": token},
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional("password", default=""): str,
+                    vol.Optional("token", default=""): str,
+                }
+            ),
+            description_placeholders={"username": reauth_entry.data["username"]},
+            errors=errors,
+        )
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
@@ -124,6 +183,10 @@ class CannotConnect(exceptions.HomeAssistantError):
 
 class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
+
+
+class BothCredentialsProvided(exceptions.HomeAssistantError):
+    """Error to indicate both a password and a token were provided."""
 
 
 class CarsonOptionsFlowHandler(config_entries.OptionsFlow):
