@@ -6,7 +6,7 @@
   "documentation": "https://github.com/lowlydba/ha-carson-living/blob/main/README.md",
   "issue_tracker": "https://github.com/lowlydba/ha-carson-living/issues",
   "requirements": [
-    "carson_living @ git+https://github.com/lowlydba/python-carson-living@main"
+    "carson-living-electric-boogaloo==0.1.0"
   ],
   "ssdp": [],
   "zeroconf": [],
