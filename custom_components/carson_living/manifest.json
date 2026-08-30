@@ -1,19 +1,19 @@
 {
   "domain": "carson_living",
   "name": "Carson Living",
-  "version": "0.1.0",
+  "codeowners": [
+    "@lowlydba"
+  ],
   "config_flow": true,
+  "dependencies": [],
   "documentation": "https://github.com/lowlydba/ha-carson-living/blob/main/README.md",
+  "homekit": {},
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/lowlydba/ha-carson-living/issues",
   "requirements": [
     "carson-living-electric-boogaloo==0.1.0"
   ],
   "ssdp": [],
-  "zeroconf": [],
-  "homekit": {},
-  "dependencies": [],
-  "codeowners": [
-    "@lowlydba"
-  ]
+  "version": "0.1.0",
+  "zeroconf": []
 }
