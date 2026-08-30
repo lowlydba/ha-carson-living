@@ -24,6 +24,7 @@ test = [
   "coveralls==4.0.2",
   "flake8==7.1.1",
   "pylint==3.3.4",
+  "PyTurboJPEG==2.5.0",
 ]
 
 [tool.setuptools]
