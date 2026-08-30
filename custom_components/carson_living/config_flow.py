@@ -112,6 +112,7 @@ class CarsonConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.async_step_user(user_input)
 
     async def async_step_reauth(self, entry_data):
+        # pylint: disable=unused-argument
         """Handle reauthentication, e.g. when a captured token has expired."""
         return await self.async_step_reauth_confirm()
 
