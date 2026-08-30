@@ -1,7 +1,8 @@
 {
   "config": {
     "abort": {
-      "already_configured": "Device is already configured"
+      "already_configured": "Device is already configured",
+      "reauth_successful": "Re-authentication was successful"
     },
     "error": {
       "cannot_connect": "Failed to connect, please try again",
@@ -16,6 +17,14 @@
           "username": "Username"
         },
         "title": "Sign-in with Carson account"
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Carson",
+        "description": "Your Carson session for {username} is no longer valid. Paste a fresh token (or password) to keep this integration working.",
+        "data": {
+          "password": "Password (optional if using a token)",
+          "token": "Token (optional, for Google/SSO-only accounts)"
+        }
       }
     },
     "title": "Carson"

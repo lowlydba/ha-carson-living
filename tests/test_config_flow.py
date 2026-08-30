@@ -117,6 +117,79 @@ async def test_form_cannot_connect(hass):
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
+async def test_reauth_flow_updates_existing_entry(hass):
+    """Test reauth lets a fresh token be pasted in without a duplicate entry.
+
+    This is the main "ease of use later" path: once a captured Google/SSO
+    token expires, the user shouldn't have to delete and recreate the whole
+    integration (losing entity IDs/history) just to paste in a new one.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"username": "foo@bar.com", "password": "", "token": "stale-token"},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_REAUTH,
+            "entry_id": entry.entry_id,
+        },
+        data=entry.data,
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+
+    with patch(
+        "custom_components.carson_living.config_flow.Carson",
+        return_value=Mock(token="fresh-token"),
+    ) as mock_carson, patch(
+        "custom_components.carson_living.async_setup_entry", return_value=True,
+    ):
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"password": "", "token": "fresh-token"},
+        )
+        await hass.async_block_till_done()
+
+    assert result2["type"] is FlowResultType.ABORT
+    assert result2["reason"] == "reauth_successful"
+    assert entry.data["username"] == "foo@bar.com"
+    assert entry.data["token"] == "fresh-token"
+    mock_carson.assert_called_once_with("foo@bar.com", "", "fresh-token")
+
+
+async def test_reauth_flow_invalid_auth(hass):
+    """Test reauth surfaces invalid_auth errors instead of silently failing."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"username": "foo@bar.com", "password": "", "token": "stale-token"},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_REAUTH,
+            "entry_id": entry.entry_id,
+        },
+        data=entry.data,
+    )
+
+    with patch(
+        "custom_components.carson_living.config_flow.Carson",
+        side_effect=CarsonAuthenticationError,
+    ):
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"password": "", "token": "still-bad"},
+        )
+
+    assert result2["type"] is FlowResultType.FORM
+    assert result2["step_id"] == "reauth_confirm"
+    assert result2["errors"] == {"base": "invalid_auth"}
+    assert entry.data["token"] == "stale-token"
+
+
 async def test_option_flow(hass):
     """Test config flow options."""
     entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
