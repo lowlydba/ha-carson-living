@@ -87,4 +87,4 @@ class CarsonLock(CarsonEntityMixin, LockEntity):
         """Delay x seconds and update state to LOCKED."""
         await asyncio.sleep(delay)
         self._is_locked = True
-        self.schedule_update_ha_state()
+        self.async_schedule_update_ha_state()

@@ -1,10 +1,10 @@
 -e .
-homeassistant==2024.12.3
-pytest-homeassistant-custom-component==0.13.193
-aiohttp-cors==0.7.0
+homeassistant==2026.8.3
+pytest-homeassistant-custom-component==0.13.357
+aiohttp-cors==0.8.1
 requests-mock==1.12.1
-pytest==8.3.3
-pytest-cov==6.0.0
-coveralls==4.0.1
+pytest==9.0.3
+pytest-cov==7.1.0
+coveralls==4.0.2
 flake8==7.1.1
 pylint==3.3.4
