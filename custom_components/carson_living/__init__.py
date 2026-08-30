@@ -9,6 +9,7 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 import homeassistant.helpers.config_validation as cv
 from homeassistant.util.async_ import run_callback_threadsafe
 
@@ -73,11 +74,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             entry.data["token"],
             token_updater,
         )
-    except CarsonAuthenticationError:
-        _LOGGER.error(
-            "Username and Password seem not valid any longer. Please setup Carson again."
-        )
-        return False
+    except CarsonAuthenticationError as error:
+        # Surface this as a reauth flow instead of a silent setup failure, so
+        # the UI prompts for a fresh token (e.g. once a captured Google/SSO
+        # JWT expires) without requiring the whole integration to be deleted
+        # and re-added from scratch.
+        raise ConfigEntryAuthFailed(
+            "Carson token/password no longer valid; please re-authenticate"
+        ) from error
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "api": carson,

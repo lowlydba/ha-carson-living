@@ -9,6 +9,14 @@
           "password": "Password (optional if using a token)",
           "token": "Token (optional, for Google/SSO-only accounts)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Carson",
+        "description": "Your Carson session for {username} is no longer valid. Paste a fresh token (or password) to keep this integration working.",
+        "data": {
+          "password": "Password (optional if using a token)",
+          "token": "Token (optional, for Google/SSO-only accounts)"
+        }
       }
     },
     "error": {
@@ -17,7 +25,8 @@
       "unknown": "Unexpected error"
     },
     "abort": {
-      "already_configured": "Device is already configured"
+      "already_configured": "Device is already configured",
+      "reauth_successful": "Re-authentication was successful"
     }
   },
   "options": {
