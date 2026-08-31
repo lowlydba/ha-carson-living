@@ -35,7 +35,7 @@ include = ["custom_components*"]
 namespaces = true
 
 [tool.setuptools.package-data]
-"custom_components.carson_living" = ["*.json", "*.yaml", "translations/*.json"]
+"custom_components.carson_living" = ["*.json", "*.yaml", "translations/*.json", "brand/*.png"]
 
 [tool.pytest.ini_options]
 addopts = "--force-enable-socket"
