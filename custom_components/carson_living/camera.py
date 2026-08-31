@@ -56,7 +56,7 @@ def _get_cameras(carson, config_entry):
         allowed_camera_ids = {
             camera["liveViewId"]
             for camera in building.entity_payload.get("cameras", [])
-            if camera.get("provider") == "eagle_eye"
+            if str(camera.get("provider", "")).startswith("eagle_eye")
         }
         _LOGGER.debug(
             "Building %s (%s) allowed camera liveViewIds from Carson: %s",
