@@ -53,10 +53,7 @@ The carson app should create all the door and camera entities available on your 
 Carson's API has no direct login endpoint for federated logins (e.g. "Sign in with
 Google"), so accounts that only ever sign in that way have no native Carson
 password to enter here. For those accounts, leave "Password" blank and instead
-paste a JWT into the "Token" field. This is the same token the Carson mobile app
-uses on your behalf after you sign in, so you'll need to capture it once from an
-already-authenticated session, e.g. via a proxy such as
-[HTTP Toolkit](https://httptoolkit.com/) or mitmproxy.
+paste a JWT into the "Token" field. 
 
 Once set up, the integration renews the token automatically as needed. If you
 supplied a password, renewal happens transparently; if you didn't, expect to
