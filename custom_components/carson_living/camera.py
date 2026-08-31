@@ -21,9 +21,34 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Create the Cameras for the Carson devices."""
     _LOGGER.debug("Setting up Carson Camera entries")
     carson = hass.data[DOMAIN][config_entry.entry_id]["api"]
+    # building.eagleeye_api.update() performs blocking network I/O, so the
+    # whole per-building lookup/filter must run off the event loop.
+    cameras = await hass.async_add_executor_job(
+        _get_cameras, carson, config_entry
+    )
+
+    async_add_entities(
+        [EagleEyeCamera(config_entry.entry_id, camera, hass) for camera in cameras]
+    )
+
+
+def _get_cameras(carson, config_entry):
+    """Return the Eagle Eye camera entities to expose for this config entry."""
     cameras = []
     for building in carson.buildings:
         building.eagleeye_api.update()
+        _LOGGER.debug(
+            "Building %s (%s) raw entity_payload cameras: %s",
+            building.name,
+            building.entity_id,
+            building.entity_payload.get("cameras"),
+        )
+        _LOGGER.debug(
+            "Building %s (%s) Eagle Eye account cameras: %s",
+            building.name,
+            building.entity_id,
+            [(cam.entity_id, cam.name) for cam in building.eagleeye_api.cameras],
+        )
         if get_list_een_option(config_entry):
             cameras.extend(list(building.eagleeye_api.cameras))
             continue
@@ -31,17 +56,20 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         allowed_camera_ids = {
             camera["liveViewId"]
             for camera in building.entity_payload.get("cameras", [])
-            if camera.get("provider") == "eagle_eye"
+            if str(camera.get("provider", "")).startswith("eagle_eye")
         }
+        _LOGGER.debug(
+            "Building %s (%s) allowed camera liveViewIds from Carson: %s",
+            building.name,
+            building.entity_id,
+            allowed_camera_ids,
+        )
         cameras.extend(
             camera
             for camera in building.eagleeye_api.cameras
             if camera.entity_id in allowed_camera_ids
         )
-
-    async_add_entities(
-        [EagleEyeCamera(config_entry.entry_id, camera, hass) for camera in cameras]
-    )
+    return cameras
 
 
 def get_list_een_option(config_entry):
