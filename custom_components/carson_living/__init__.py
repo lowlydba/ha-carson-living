@@ -1,4 +1,5 @@
 """The Carson integration."""
+import asyncio
 from functools import partial
 import logging
 
@@ -30,6 +31,11 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 PLATFORMS = ["lock", "camera"]
+
+# The Carson API can be slow to respond on the initial login. Wait at least
+# this long before warning, so a normal-but-slow startup isn't logged as if
+# something were wrong.
+SLOW_INIT_WARNING = 30
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
@@ -66,14 +72,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             ),
         ).result()
 
-    try:
-        carson = await hass.async_add_executor_job(
-            Carson,
-            entry.data["username"],
-            entry.data["password"],
-            entry.data["token"],
-            token_updater,
+    # async_add_executor_job already returns a Future, not a coroutine, so it
+    # can be awaited directly and doesn't need (and can't use) async_create_task.
+    carson_task = hass.async_add_executor_job(
+        Carson,
+        entry.data["username"],
+        entry.data["password"],
+        entry.data["token"],
+        token_updater,
+    )
+
+    async def _warn_if_slow():
+        """Log a warning only if init is still running after SLOW_INIT_WARNING."""
+        await asyncio.sleep(SLOW_INIT_WARNING)
+        _LOGGER.warning(
+            "Carson API initialization has taken longer than %s seconds; "
+            "the Carson service can be slow to respond, setup is still in "
+            "progress",
+            SLOW_INIT_WARNING,
         )
+
+    warn_task = hass.async_create_task(_warn_if_slow())
+
+    try:
+        carson = await carson_task
     except CarsonAuthenticationError as error:
         # Surface this as a reauth flow instead of a silent setup failure, so
         # the UI prompts for a fresh token (e.g. once a captured Google/SSO
@@ -82,6 +104,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         raise ConfigEntryAuthFailed(
             "Carson token/password no longer valid; please re-authenticate"
         ) from error
+    finally:
+        warn_task.cancel()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "api": carson,
