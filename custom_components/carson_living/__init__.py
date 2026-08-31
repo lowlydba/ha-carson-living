@@ -72,14 +72,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             ),
         ).result()
 
-    carson_task = hass.async_create_task(
-        hass.async_add_executor_job(
-            Carson,
-            entry.data["username"],
-            entry.data["password"],
-            entry.data["token"],
-            token_updater,
-        )
+    # async_add_executor_job already returns a Future, not a coroutine, so it
+    # can be awaited directly and doesn't need (and can't use) async_create_task.
+    carson_task = hass.async_add_executor_job(
+        Carson,
+        entry.data["username"],
+        entry.data["password"],
+        entry.data["token"],
+        token_updater,
     )
 
     async def _warn_if_slow():
