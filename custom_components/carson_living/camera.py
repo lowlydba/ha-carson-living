@@ -5,6 +5,7 @@ import logging
 
 from homeassistant.components.camera import CameraEntityFeature, Camera
 from homeassistant.const import ATTR_ATTRIBUTION
+import homeassistant.util.dt as dt_util
 
 from .const import (
     ATTRIBUTION,
@@ -15,6 +16,13 @@ from .const import (
 from .entity import CarsonEntityMixin
 
 _LOGGER = logging.getLogger(__name__)
+
+# Minimum time between snapshot fetches from Eagle Eye. Still-image polling
+# cards (camera_view: auto/glance/picture-entity) call camera_image() on the
+# frontend's poll cadence; without this, every poll is a full round-trip to
+# EEN's cloud (~4-6s), causing visible lag. Live view via stream_source() is
+# unaffected by this and always pulls a fresh RTSP/HLS URL.
+MIN_TIME_BETWEEN_IMAGE_UPDATES = timedelta(seconds=10)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -87,6 +95,8 @@ class EagleEyeCamera(CarsonEntityMixin, Camera):
         super().__init__(config_entry_id, ee_camera)
         self._ee_camera = ee_camera
         self._hass = hass
+        self._last_image = None
+        self._last_image_time = dt_util.utc_from_timestamp(0)
 
     @property
     def name(self):
@@ -106,11 +116,21 @@ class EagleEyeCamera(CarsonEntityMixin, Camera):
         }
 
     def camera_image(self, width=None, height=None):
-        """Return bytes of camera image."""
+        """Return bytes of camera image, cached for MIN_TIME_BETWEEN_IMAGE_UPDATES."""
+        now = dt_util.utcnow()
+        if (
+            self._last_image is not None
+            and now - self._last_image_time < MIN_TIME_BETWEEN_IMAGE_UPDATES
+        ):
+            _LOGGER.debug("Returning cached camera image for %s", self.name)
+            return self._last_image
+
         _LOGGER.debug("Getting live camera image for %s", self.name)
         buffer = io.BytesIO()
         self._ee_camera.get_image(buffer)
-        return buffer.getvalue()
+        self._last_image = buffer.getvalue()
+        self._last_image_time = now
+        return self._last_image
 
     @property
     def supported_features(self):
