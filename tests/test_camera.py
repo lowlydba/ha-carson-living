@@ -1,8 +1,10 @@
 """Tests for the Carson Camera platform."""
+from datetime import timedelta
 from unittest.mock import patch
 
 from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
 from homeassistant.helpers import entity_registry as er
+import homeassistant.util.dt as dt_util
 
 from .common import carson_load_fixture, fixture_een_subdomain, setup_platform
 
@@ -78,6 +80,53 @@ async def test_camera_returns_image(hass, success_requests_mock):
 
     assert img is not None
     assert data == img
+
+
+async def test_camera_image_is_throttled(hass, success_requests_mock):
+    """Test that a repeat call within the throttle window returns cached bytes."""
+    await setup_platform(hass, CAMERA_DOMAIN)
+    component = hass.data.get(CAMERA_DOMAIN)
+
+    data = b"image as binary data"
+    een_subdomain = fixture_een_subdomain()
+    image_mock = success_requests_mock.get(
+        f"https://{een_subdomain}.eagleeyenetworks.com/asset/prev/image.jpeg",
+        content=data,
+    )
+
+    camera = component.get_entity("camera.camera_name_1")
+
+    first = camera.camera_image()
+    second = camera.camera_image()
+
+    assert first == data
+    assert second == data
+    assert image_mock.call_count == 1
+
+
+async def test_camera_image_refetches_after_throttle_window(hass, success_requests_mock):
+    """Test that a new image is fetched once the throttle window has elapsed."""
+    await setup_platform(hass, CAMERA_DOMAIN)
+    component = hass.data.get(CAMERA_DOMAIN)
+
+    data = b"image as binary data"
+    een_subdomain = fixture_een_subdomain()
+    image_mock = success_requests_mock.get(
+        f"https://{een_subdomain}.eagleeyenetworks.com/asset/prev/image.jpeg",
+        content=data,
+    )
+
+    camera = component.get_entity("camera.camera_name_1")
+
+    now = dt_util.utcnow()
+    with patch("custom_components.carson_living.camera.dt_util.utcnow", return_value=now):
+        camera.camera_image()
+
+    later = now + timedelta(seconds=11)
+    with patch("custom_components.carson_living.camera.dt_util.utcnow", return_value=later):
+        camera.camera_image()
+
+    assert image_mock.call_count == 2
 
 
 async def test_camera_returns_stream_url(hass, success_requests_mock):
