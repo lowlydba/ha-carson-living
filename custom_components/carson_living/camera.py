@@ -21,6 +21,19 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Create the Cameras for the Carson devices."""
     _LOGGER.debug("Setting up Carson Camera entries")
     carson = hass.data[DOMAIN][config_entry.entry_id]["api"]
+    # building.eagleeye_api.update() performs blocking network I/O, so the
+    # whole per-building lookup/filter must run off the event loop.
+    cameras = await hass.async_add_executor_job(
+        _get_cameras, carson, config_entry
+    )
+
+    async_add_entities(
+        [EagleEyeCamera(config_entry.entry_id, camera, hass) for camera in cameras]
+    )
+
+
+def _get_cameras(carson, config_entry):
+    """Return the Eagle Eye camera entities to expose for this config entry."""
     cameras = []
     for building in carson.buildings:
         building.eagleeye_api.update()
@@ -56,10 +69,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             for camera in building.eagleeye_api.cameras
             if camera.entity_id in allowed_camera_ids
         )
-
-    async_add_entities(
-        [EagleEyeCamera(config_entry.entry_id, camera, hass) for camera in cameras]
-    )
+    return cameras
 
 
 def get_list_een_option(config_entry):
