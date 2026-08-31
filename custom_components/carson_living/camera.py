@@ -24,6 +24,18 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     cameras = []
     for building in carson.buildings:
         building.eagleeye_api.update()
+        _LOGGER.debug(
+            "Building %s (%s) raw entity_payload cameras: %s",
+            building.name,
+            building.entity_id,
+            building.entity_payload.get("cameras"),
+        )
+        _LOGGER.debug(
+            "Building %s (%s) Eagle Eye account cameras: %s",
+            building.name,
+            building.entity_id,
+            [(cam.entity_id, cam.name) for cam in building.eagleeye_api.cameras],
+        )
         if get_list_een_option(config_entry):
             cameras.extend(list(building.eagleeye_api.cameras))
             continue
@@ -33,6 +45,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             for camera in building.entity_payload.get("cameras", [])
             if camera.get("provider") == "eagle_eye"
         }
+        _LOGGER.debug(
+            "Building %s (%s) allowed camera liveViewIds from Carson: %s",
+            building.name,
+            building.entity_id,
+            allowed_camera_ids,
+        )
         cameras.extend(
             camera
             for camera in building.eagleeye_api.cameras
