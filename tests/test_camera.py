@@ -1,14 +1,18 @@
 """Tests for the Carson Camera platform."""
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+from carson_living import CarsonError
 from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 import homeassistant.util.dt as dt_util
 
-from custom_components.carson_living.camera import _async_repair_stale_cameras
+from custom_components.carson_living.camera import (
+    _async_repair_stale_cameras,
+    _update_eagleeye_session_with_retries,
+)
 from custom_components.carson_living.const import DOMAIN
 from custom_components.carson_living.repairs import async_create_fix_flow
 
@@ -159,7 +163,8 @@ async def test_setup_continues_when_eagleeye_session_is_unavailable(
         text="",
     )
 
-    await setup_platform(hass, CAMERA_DOMAIN)
+    with patch("custom_components.carson_living.camera.time.sleep"):
+        await setup_platform(hass, CAMERA_DOMAIN)
 
     entity_registry = er.async_get(hass)
     assert entity_registry.async_get("camera.camera_name_1") is None
@@ -175,6 +180,36 @@ async def test_setup_continues_when_eagleeye_session_is_unavailable(
         )
         is None
     )
+
+
+def test_eagleeye_session_update_retries_transient_failure():
+    """A transient failure is retried and succeeds without exhausting attempts."""
+    building = MagicMock()
+    building.name = "Test Building"
+    building.entity_id = "b0"
+    building.eagleeye_api.update.side_effect = [CarsonError("boom"), None]
+
+    with patch("custom_components.carson_living.camera.time.sleep") as mock_sleep:
+        error = _update_eagleeye_session_with_retries(building)
+
+    assert error is None
+    assert building.eagleeye_api.update.call_count == 2
+    mock_sleep.assert_called_once()
+
+
+def test_eagleeye_session_update_gives_up_after_max_attempts():
+    """All attempts failing surfaces the last error and stops retrying."""
+    building = MagicMock()
+    building.name = "Test Building"
+    building.entity_id = "b0"
+    building.eagleeye_api.update.side_effect = CarsonError("still broken")
+
+    with patch("custom_components.carson_living.camera.time.sleep") as mock_sleep:
+        error = _update_eagleeye_session_with_retries(building)
+
+    assert isinstance(error, CarsonError)
+    assert building.eagleeye_api.update.call_count == 3
+    assert mock_sleep.call_count == 2
 
 
 async def test_camera_returns_stream_url(hass, success_requests_mock):
