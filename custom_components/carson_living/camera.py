@@ -63,6 +63,20 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         _async_repair_stale_cameras(hass, config_entry, cameras)
 
 
+def _building_has_eagleeye_cameras(building):
+    """Whether Carson reports any Eagle Eye camera for this building.
+
+    A building with no eagle_eye*-provider camera in Carson's own payload
+    has no Eagle Eye account linked on Carson's side, so its Eagle Eye
+    session endpoint 404s every time. That's a permanent condition, not
+    the transient failure _update_eagleeye_session_with_retries retries.
+    """
+    return any(
+        str(camera.get("provider", "")).startswith("eagle_eye")
+        for camera in building.entity_payload.get("cameras", [])
+    )
+
+
 def _update_eagleeye_session_with_retries(building):
     """Update a building's Eagle Eye session, retrying transient failures.
 
@@ -100,6 +114,15 @@ def _get_cameras(carson, config_entry):
     cameras = []
     all_buildings_ok = True
     for building in carson.buildings:
+        if not _building_has_eagleeye_cameras(building):
+            _LOGGER.debug(
+                "Building %s (%s) has no Eagle Eye cameras per Carson; "
+                "skipping its Eagle Eye session update",
+                building.name,
+                building.entity_id,
+            )
+            continue
+
         error = _update_eagleeye_session_with_retries(building)
         if error is not None:
             # Don't let one building's failure take down camera setup for

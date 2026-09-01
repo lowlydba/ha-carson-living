@@ -1,5 +1,6 @@
 """Tests for the Carson Camera platform."""
 from datetime import timedelta
+import json
 from unittest.mock import MagicMock, patch
 
 from carson_living import CarsonError
@@ -11,6 +12,7 @@ import homeassistant.util.dt as dt_util
 
 from custom_components.carson_living.camera import (
     _async_repair_stale_cameras,
+    _building_has_eagleeye_cameras,
     _update_eagleeye_session_with_retries,
 )
 from custom_components.carson_living.const import DOMAIN
@@ -210,6 +212,58 @@ def test_eagleeye_session_update_gives_up_after_max_attempts():
     assert isinstance(error, CarsonError)
     assert building.eagleeye_api.update.call_count == 3
     assert mock_sleep.call_count == 2
+
+
+def test_building_has_eagleeye_cameras_true_for_eagle_eye_provider():
+    """A building whose Carson payload lists an eagle_eye* camera qualifies."""
+    building = MagicMock()
+    building.entity_payload = {
+        "cameras": [{"provider": "eagle_eye_v2", "liveViewId": "c0"}]
+    }
+
+    assert _building_has_eagleeye_cameras(building) is True
+
+
+def test_building_has_eagleeye_cameras_false_without_eagle_eye_provider():
+    """A building with only non-Eagle-Eye cameras (or none) doesn't qualify."""
+    building = MagicMock()
+    building.entity_payload = {"cameras": [{"provider": "smartair", "liveViewId": "d0"}]}
+
+    assert _building_has_eagleeye_cameras(building) is False
+
+    building.entity_payload = {"cameras": []}
+    assert _building_has_eagleeye_cameras(building) is False
+
+
+async def test_skips_eagleeye_session_when_building_has_no_eagleeye_cameras(
+    hass, success_requests_mock
+):
+    """A building with no Eagle Eye camera never hits its session endpoint.
+
+    Carson's own building payload is the source of truth for whether a
+    building has an Eagle Eye account linked; querying the session
+    endpoint anyway would just 404 every time (a permanent condition the
+    retries in _update_eagleeye_session_with_retries aren't meant for).
+    """
+    building_id = fixture_building_id()
+    me_payload = json.loads(carson_load_fixture("carson_me.json"))
+    for camera in me_payload["data"]["properties"][0]["cameras"]:
+        camera["provider"] = "smartair"
+    success_requests_mock.get(
+        f"https://api.carson.live/api/v{CARSON_API_VERSION}/me/",
+        json=me_payload,
+    )
+    session_mock = success_requests_mock.get(
+        f"https://api.carson.live/api/v{CARSON_API_VERSION}/properties/"
+        f"buildings/{building_id}/eagleeye/session/",
+        text=carson_load_fixture("carson_eagleeye_session.json"),
+    )
+
+    await setup_platform(hass, CAMERA_DOMAIN)
+
+    entity_registry = er.async_get(hass)
+    assert entity_registry.async_get("camera.camera_name_1") is None
+    assert session_mock.call_count == 0
 
 
 async def test_camera_returns_stream_url(hass, success_requests_mock):
