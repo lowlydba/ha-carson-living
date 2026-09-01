@@ -39,5 +39,18 @@
         }
       }
     }
+  },
+  "issues": {
+    "stale_cameras": {
+      "title": "Carson camera(s) no longer reported",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Remove {count} stale Carson camera(s)?",
+            "description": "Carson/Eagle Eye no longer reports {count} camera entities previously set up by this integration. Confirm to remove them from Home Assistant."
+          }
+        }
+      }
+    }
   }
 }
