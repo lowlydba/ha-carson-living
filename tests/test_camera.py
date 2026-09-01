@@ -200,7 +200,7 @@ async def test_camera_returns_stream_url(hass, success_requests_mock):
 
 async def test_stale_camera_repair_created_for_removed_camera(
     hass, success_requests_mock
-):
+):  # pylint: disable=unused-argument
     """A camera Carson no longer reports gets a fixable repair issue."""
     await setup_platform(hass, CAMERA_DOMAIN)
     config_entry = hass.config_entries.async_entries(DOMAIN)[0]
@@ -232,7 +232,7 @@ async def test_stale_camera_repair_created_for_removed_camera(
 
 async def test_stale_camera_repair_cleared_when_no_longer_stale(
     hass, success_requests_mock
-):
+):  # pylint: disable=unused-argument
     """A previously created repair clears once every camera is accounted for."""
     await setup_platform(hass, CAMERA_DOMAIN)
     config_entry = hass.config_entries.async_entries(DOMAIN)[0]
@@ -256,7 +256,9 @@ async def test_stale_camera_repair_cleared_when_no_longer_stale(
     assert issue_registry.async_get_issue(DOMAIN, issue_id) is None
 
 
-async def test_stale_camera_repair_flow_removes_entity(hass, success_requests_mock):
+async def test_stale_camera_repair_flow_removes_entity(
+    hass, success_requests_mock
+):  # pylint: disable=unused-argument
     """Confirming the repair flow removes the stale camera entity."""
     await setup_platform(hass, CAMERA_DOMAIN)
     config_entry = hass.config_entries.async_entries(DOMAIN)[0]
