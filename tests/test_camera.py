@@ -6,7 +6,13 @@ from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
 from homeassistant.helpers import entity_registry as er
 import homeassistant.util.dt as dt_util
 
-from .common import carson_load_fixture, fixture_een_subdomain, setup_platform
+from .common import (
+    CARSON_API_VERSION,
+    carson_load_fixture,
+    fixture_building_id,
+    fixture_een_subdomain,
+    setup_platform,
+)
 
 
 async def test_entity_registry(hass, success_requests_mock):  # pylint: disable=unused-argument
@@ -127,6 +133,24 @@ async def test_camera_image_refetches_after_throttle_window(hass, success_reques
         camera.camera_image()
 
     assert image_mock.call_count == 2
+
+
+async def test_setup_continues_when_eagleeye_session_is_unavailable(
+    hass, success_requests_mock, caplog
+):
+    """A malformed Eagle Eye session response shouldn't fail camera setup."""
+    building_id = fixture_building_id()
+    success_requests_mock.get(
+        f"https://api.carson.live/api/v{CARSON_API_VERSION}/properties/"
+        f"buildings/{building_id}/eagleeye/session/",
+        text="",
+    )
+
+    await setup_platform(hass, CAMERA_DOMAIN)
+
+    entity_registry = er.async_get(hass)
+    assert entity_registry.async_get("camera.camera_name_1") is None
+    assert "unable to update Eagle Eye session" in caplog.text
 
 
 async def test_camera_returns_stream_url(hass, success_requests_mock):

@@ -3,6 +3,7 @@ from datetime import timedelta
 import io
 import logging
 
+from carson_living import CarsonError
 from homeassistant.components.camera import CameraEntityFeature, Camera
 from homeassistant.const import ATTR_ATTRIBUTION
 import homeassistant.util.dt as dt_util
@@ -44,7 +45,20 @@ def _get_cameras(carson, config_entry):
     """Return the Eagle Eye camera entities to expose for this config entry."""
     cameras = []
     for building in carson.buildings:
-        building.eagleeye_api.update()
+        try:
+            building.eagleeye_api.update()
+        except CarsonError as error:
+            # Eagle Eye's API is intermittently flaky (e.g. a bad session
+            # response). Don't let one building's failure take down camera
+            # setup for every other building on this account.
+            _LOGGER.warning(
+                "Skipping cameras for building %s (%s): unable to update "
+                "Eagle Eye session: %s",
+                building.name,
+                building.entity_id,
+                error,
+            )
+            continue
         _LOGGER.debug(
             "Building %s (%s) raw entity_payload cameras: %s",
             building.name,
