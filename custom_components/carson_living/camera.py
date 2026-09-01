@@ -2,6 +2,7 @@
 from datetime import timedelta
 import io
 import logging
+import time
 
 from carson_living import CarsonError
 from homeassistant.components.camera import (
@@ -31,6 +32,14 @@ _LOGGER = logging.getLogger(__name__)
 # unaffected by this and always pulls a fresh RTSP/HLS URL.
 MIN_TIME_BETWEEN_IMAGE_UPDATES = timedelta(seconds=10)
 
+# Eagle Eye's session API is intermittently flaky. A single failed update()
+# call used to drop every camera for that building for the entire HA
+# session (until restart), even though the entity registry entries and any
+# dashboard cards still referenced them - causing "Camera not found"
+# websocket errors on every poll. Retry a few times before giving up.
+EAGLE_EYE_UPDATE_ATTEMPTS = 3
+EAGLE_EYE_UPDATE_RETRY_DELAY = timedelta(seconds=1)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Create the Cameras for the Carson devices."""
@@ -54,6 +63,33 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         _async_repair_stale_cameras(hass, config_entry, cameras)
 
 
+def _update_eagleeye_session_with_retries(building):
+    """Update a building's Eagle Eye session, retrying transient failures.
+
+    Returns the last CarsonError if every attempt failed, or None once an
+    attempt succeeds.
+    """
+    error = None
+    for attempt in range(1, EAGLE_EYE_UPDATE_ATTEMPTS + 1):
+        try:
+            building.eagleeye_api.update()
+            return None
+        except CarsonError as retry_error:
+            error = retry_error
+            if attempt < EAGLE_EYE_UPDATE_ATTEMPTS:
+                _LOGGER.debug(
+                    "Eagle Eye session update failed for building %s (%s), "
+                    "retrying (attempt %d/%d): %s",
+                    building.name,
+                    building.entity_id,
+                    attempt,
+                    EAGLE_EYE_UPDATE_ATTEMPTS,
+                    retry_error,
+                )
+                time.sleep(EAGLE_EYE_UPDATE_RETRY_DELAY.total_seconds())
+    return error
+
+
 def _get_cameras(carson, config_entry):
     """Return the Eagle Eye camera entities to expose for this config entry.
 
@@ -64,17 +100,16 @@ def _get_cameras(carson, config_entry):
     cameras = []
     all_buildings_ok = True
     for building in carson.buildings:
-        try:
-            building.eagleeye_api.update()
-        except CarsonError as error:
-            # Eagle Eye's API is intermittently flaky (e.g. a bad session
-            # response). Don't let one building's failure take down camera
-            # setup for every other building on this account.
+        error = _update_eagleeye_session_with_retries(building)
+        if error is not None:
+            # Don't let one building's failure take down camera setup for
+            # every other building on this account.
             _LOGGER.warning(
                 "Skipping cameras for building %s (%s): unable to update "
-                "Eagle Eye session: %s",
+                "Eagle Eye session after %d attempts: %s",
                 building.name,
                 building.entity_id,
+                EAGLE_EYE_UPDATE_ATTEMPTS,
                 error,
             )
             all_buildings_ok = False
