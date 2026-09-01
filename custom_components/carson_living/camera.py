@@ -3,8 +3,15 @@ from datetime import timedelta
 import io
 import logging
 
-from homeassistant.components.camera import CameraEntityFeature, Camera
+from carson_living import CarsonError
+from homeassistant.components.camera import (
+    DOMAIN as CAMERA_DOMAIN,
+    CameraEntityFeature,
+    Camera,
+)
 from homeassistant.const import ATTR_ATTRIBUTION
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
 import homeassistant.util.dt as dt_util
 
 from .const import (
@@ -31,7 +38,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     carson = hass.data[DOMAIN][config_entry.entry_id]["api"]
     # building.eagleeye_api.update() performs blocking network I/O, so the
     # whole per-building lookup/filter must run off the event loop.
-    cameras = await hass.async_add_executor_job(
+    cameras, all_buildings_ok = await hass.async_add_executor_job(
         _get_cameras, carson, config_entry
     )
 
@@ -39,12 +46,39 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         [EagleEyeCamera(config_entry.entry_id, camera, hass) for camera in cameras]
     )
 
+    # Only trust the camera list enough to flag removals when every building
+    # actually reported in this round; a building skipped above due to a
+    # transient Eagle Eye failure would otherwise look like all of its
+    # cameras had been deleted.
+    if all_buildings_ok:
+        _async_repair_stale_cameras(hass, config_entry, cameras)
+
 
 def _get_cameras(carson, config_entry):
-    """Return the Eagle Eye camera entities to expose for this config entry."""
+    """Return the Eagle Eye camera entities to expose for this config entry.
+
+    Also returns whether every building's Eagle Eye session updated
+    successfully this round, so callers can tell a building that reported
+    zero cameras apart from one that was skipped due to a transient error.
+    """
     cameras = []
+    all_buildings_ok = True
     for building in carson.buildings:
-        building.eagleeye_api.update()
+        try:
+            building.eagleeye_api.update()
+        except CarsonError as error:
+            # Eagle Eye's API is intermittently flaky (e.g. a bad session
+            # response). Don't let one building's failure take down camera
+            # setup for every other building on this account.
+            _LOGGER.warning(
+                "Skipping cameras for building %s (%s): unable to update "
+                "Eagle Eye session: %s",
+                building.name,
+                building.entity_id,
+                error,
+            )
+            all_buildings_ok = False
+            continue
         _LOGGER.debug(
             "Building %s (%s) raw entity_payload cameras: %s",
             building.name,
@@ -77,7 +111,48 @@ def _get_cameras(carson, config_entry):
             for camera in building.eagleeye_api.cameras
             if camera.entity_id in allowed_camera_ids
         )
-    return cameras
+    return cameras, all_buildings_ok
+
+
+def _async_repair_stale_cameras(hass, config_entry, cameras):
+    """Offer a repair to remove camera entities Carson/Eagle Eye dropped.
+
+    Only called when every building updated successfully this round, so
+    any registered camera entity missing from `cameras` is genuinely gone
+    rather than skipped due to a transient error.
+    """
+    current_unique_ids = {camera.unique_entity_id for camera in cameras}
+    entity_registry = er.async_get(hass)
+    stale_entity_ids = [
+        entry.entity_id
+        for entry in er.async_entries_for_config_entry(
+            entity_registry, config_entry.entry_id
+        )
+        if entry.domain == CAMERA_DOMAIN
+        and entry.unique_id not in current_unique_ids
+    ]
+
+    issue_id = f"stale_cameras_{config_entry.entry_id}"
+    if not stale_entity_ids:
+        ir.async_delete_issue(hass, DOMAIN, issue_id)
+        return
+
+    _LOGGER.warning(
+        "%d camera(s) no longer reported by Carson/Eagle Eye; creating a "
+        "repair to remove them: %s",
+        len(stale_entity_ids),
+        stale_entity_ids,
+    )
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        issue_id,
+        is_fixable=True,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="stale_cameras",
+        translation_placeholders={"count": str(len(stale_entity_ids))},
+        data={"entity_ids": ",".join(stale_entity_ids)},
+    )
 
 
 def get_list_een_option(config_entry):
