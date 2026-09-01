@@ -71,9 +71,13 @@ def _building_has_eagleeye_cameras(building):
     session endpoint 404s every time. That's a permanent condition, not
     the transient failure _update_eagleeye_session_with_retries retries.
     """
+    # "or []" rather than a .get() default: a .get("cameras", []) default
+    # only applies when the key is absent, not when Carson returns an
+    # explicit `cameras: null`. Payload shape for a building with no
+    # Eagle Eye link isn't confirmed, so guard both cases defensively.
     return any(
         str(camera.get("provider", "")).startswith("eagle_eye")
-        for camera in building.entity_payload.get("cameras", [])
+        for camera in building.entity_payload.get("cameras") or []
     )
 
 

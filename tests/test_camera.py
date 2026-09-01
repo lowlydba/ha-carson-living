@@ -235,6 +235,14 @@ def test_building_has_eagleeye_cameras_false_without_eagle_eye_provider():
     assert _building_has_eagleeye_cameras(building) is False
 
 
+def test_building_has_eagleeye_cameras_false_for_null_cameras():
+    """An explicit `cameras: null` doesn't qualify (and doesn't raise)."""
+    building = MagicMock()
+    building.entity_payload = {"cameras": None}
+
+    assert _building_has_eagleeye_cameras(building) is False
+
+
 async def test_skips_eagleeye_session_when_building_has_no_eagleeye_cameras(
     hass, success_requests_mock
 ):
